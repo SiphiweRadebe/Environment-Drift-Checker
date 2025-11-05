@@ -1,12 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using FluentMigrator.Runner;
 using EnvironmentDriftChecker.Data.Context;
 using EnvironmentDriftChecker.Data.Repositories;
 using EnvironmentDriftChecker.Data.Repositories.Interfaces;
 using EnvironmentDriftChecker.ApiService.Services;
 using EnvironmentDriftChecker.ApiService.Services.Interfaces;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.OpenApi.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations
@@ -81,19 +80,50 @@ app.UseCors("AllowBlazor");
 app.UseAuthorization();
 app.MapControllers();
 
-// Run FluentMigrator migrations on startup
+// Run FluentMigrator migrations on startup with retry logic
 using (var scope = app.Services.CreateScope())
 {
     var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<DriftCheckerDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
+    // Wait for SQL Server to be ready (with retries)
+    var maxRetries = 10;
+    var retryCount = 0;
+    var delay = TimeSpan.FromSeconds(3);
+
+    while (retryCount < maxRetries)
+    {
+        try
+        {
+            logger.LogInformation("Attempting to connect to database... (Attempt {Retry}/{Max})", retryCount + 1, maxRetries);
+            await dbContext.Database.CanConnectAsync();
+            logger.LogInformation(" Successfully connected to database");
+            break;
+        }
+        catch (Exception ex)
+        {
+            retryCount++;
+            if (retryCount >= maxRetries)
+            {
+                logger.LogError(ex, "❌ Failed to connect to database after {Max} attempts", maxRetries);
+                throw;
+            }
+            logger.LogWarning("⏳ Database not ready yet. Waiting {Delay} seconds... ({Retry}/{Max})", delay.TotalSeconds, retryCount, maxRetries);
+            await Task.Delay(delay);
+        }
+    }
+
+    // Run migrations
     try
     {
+        logger.LogInformation("Running database migrations...");
         runner.MigrateUp();
-        app.Logger.LogInformation("Database migrations completed successfully");
+        logger.LogInformation(" Database migrations completed successfully");
     }
     catch (Exception ex)
     {
-        app.Logger.LogError(ex, "An error occurred while migrating the database");
+        logger.LogError(ex, " An error occurred while migrating the database");
         throw;
     }
 }
