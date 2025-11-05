@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Testing" Version="9.3.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.2.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Environment Drift Checker.ApiService\Environment Drift Checker.ApiService.csproj" />
+    <ProjectReference Include="..\Environment Drift Checker.AppHost\Environment Drift Checker.AppHost.csproj" />
+    <ProjectReference Include="..\Environment Drift Checker.Data\Environment Drift Checker.Data.csproj" />
+    <ProjectReference Include="..\Environment Drift Checker.Domain\Environment Drift Checker.Domain.csproj" />
+    <ProjectReference Include="..\Environment Drift Checker.ServiceDefaults\Environment Drift Checker.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Environment Drift Checker.Web\Environment Drift Checker.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.Net" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Aspire.Hosting.ApplicationModel" />
+    <Using Include="Aspire.Hosting.Testing" />
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+</Project>

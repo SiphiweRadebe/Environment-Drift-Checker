@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Environment Drift Checker.Domain\Environment Drift Checker.Domain.csproj" />
+    <ProjectReference Include="..\Environment Drift Checker.ServiceDefaults\Environment Drift Checker.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>
