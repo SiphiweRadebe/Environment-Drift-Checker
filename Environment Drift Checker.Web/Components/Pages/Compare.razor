@@ -50,12 +50,12 @@ else
             </MudItem>
 
             <MudItem xs="12" Class="d-flex justify-center">
-                <MudButton Variant="Variant.Filled" 
-                          Color="Color.Primary" 
-                          Size="Size.Large"
-                          StartIcon="@Icons.Material.Filled.PlayArrow"
-                          OnClick="CompareEnvironments"
-                          Disabled="@(!_sourceEnvId.HasValue || !_targetEnvId.HasValue || _comparing)">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="CompareEnvironments"
+                           Disabled="@(!_sourceEnvId.HasValue || !_targetEnvId.HasValue || _comparing)">
                     @(_comparing ? "Comparing..." : "Compare")
                 </MudButton>
             </MudItem>
@@ -196,23 +196,35 @@ else
     private async Task CompareEnvironments()
     {
         if (!_sourceEnvId.HasValue || !_targetEnvId.HasValue)
+        {
+            Console.WriteLine("⚠️ Source or Target environment not selected");
             return;
+        }
 
         try
         {
             _comparing = true;
             _error = null;
+            _comparisonResult = null;
+            StateHasChanged(); // Force UI update
+            
+            Console.WriteLine($"🔍 Comparing: Source={_sourceEnvId}, Target={_targetEnvId}");
+            
             _comparisonResult = await Http.GetFromJsonAsync<ComparisonResultDto>(
                 $"api/compare?sourceEnvId={_sourceEnvId}&targetEnvId={_targetEnvId}");
+            
+            Console.WriteLine($"✅ Comparison complete: {_comparisonResult?.DriftCount} drifts found");
         }
         catch (Exception ex)
         {
             _error = $"Comparison failed: {ex.Message}";
             _comparisonResult = null;
+            Console.WriteLine($"❌ Comparison error: {ex}");
         }
         finally
         {
             _comparing = false;
+            StateHasChanged(); // Force UI update
         }
     }
 
