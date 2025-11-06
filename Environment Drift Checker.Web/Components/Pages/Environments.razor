@@ -164,6 +164,9 @@ else
         try
         {
             _loadingConfigs = true;
+            _error = null;
+            StateHasChanged(); // Force UI update
+            
             _selectedEnvironment = _environments?.FirstOrDefault(e => e.Id == environmentId);
             
             Console.WriteLine($"Loading configs for environment {environmentId}");
@@ -181,6 +184,7 @@ else
         finally
         {
             _loadingConfigs = false;
+            StateHasChanged(); // Force UI update
         }
     }
 

@@ -9,6 +9,7 @@ builder.AddServiceDefaults();
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
+
 // Add services to the container
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
