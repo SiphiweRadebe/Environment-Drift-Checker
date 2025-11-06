@@ -1,0 +1,116 @@
+﻿@page "/about"
+@using MudBlazor
+
+<PageTitle>About - Environment Drift Checker</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">About</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h5" Class="mb-4">Environment Drift Checker</MudText>
+            
+            <MudText Typo="Typo.body1" Class="mb-4">
+                A powerful tool designed to detect and track configuration differences (drift) across multiple environments 
+                in your software delivery pipeline.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="mt-6 mb-2">Features</MudText>
+            <MudList>
+                <MudListItem Icon="@Icons.Material.Filled.Compare">
+                    <MudText><strong>Compare Environments:</strong> Side-by-side configuration comparison</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.History">
+                    <MudText><strong>Track History:</strong> Complete audit trail of all comparisons</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Analytics">
+                    <MudText><strong>Drift Detection:</strong> Automatic identification of differences</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Security">
+                    <MudText><strong>Severity Levels:</strong> Categorize drifts by importance</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Dashboard">
+                    <MudText><strong>Visual Dashboard:</strong> Real-time overview of drift status</MudText>
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="mt-6 mb-2">Technology Stack</MudText>
+            <MudChipSet>
+                <MudChip Color="Color.Primary">ASP.NET Core 8</MudChip>
+                <MudChip Color="Color.Info">Blazor Server</MudChip>
+                <MudChip Color="Color.Success">Entity Framework Core</MudChip>
+                <MudChip Color="Color.Warning">FluentMigrator</MudChip>
+                <MudChip Color="Color.Secondary">.NET Aspire</MudChip>
+                <MudChip Color="Color.Tertiary">MudBlazor</MudChip>
+                <MudChip Color="Color.Dark">SQL Server</MudChip>
+            </MudChipSet>
+
+            <MudText Typo="Typo.h6" Class="mt-6 mb-2">Architecture</MudText>
+            <MudText Typo="Typo.body1" Class="mb-2">
+                Built using clean architecture principles with:
+            </MudText>
+            <MudList Dense="true">
+                <MudListItem Icon="@Icons.Material.Filled.Layers">
+                    <MudText><strong>Domain Layer:</strong> Core entities and business rules</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Storage">
+                    <MudText><strong>Data Layer:</strong> Repository pattern with EF Core</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Api">
+                    <MudText><strong>API Layer:</strong> RESTful services</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.WebAsset">
+                    <MudText><strong>Presentation Layer:</strong> Blazor Server UI</MudText>
+                </MudListItem>
+            </MudList>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Project Info</MudText>
+            <MudList Dense="true">
+                <MudListItem Icon="@Icons.Material.Filled.Person">
+                    <MudText><strong>Author:</strong> Siphiwe Radebe</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Business">
+                    <MudText><strong>Organization:</strong> Sage SBCP International</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.CalendarToday">
+                    <MudText><strong>Created:</strong> November 2025</MudText>
+                </MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Code">
+                    <MudText><strong>Version:</strong> 1.0.0</MudText>
+                </MudListItem>
+            </MudList>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Quick Links</MudText>
+            <MudStack Spacing="2">
+                <MudButton Href="/" 
+                          Variant="Variant.Outlined" 
+                          Color="Color.Primary" 
+                          FullWidth="true"
+                          StartIcon="@Icons.Material.Filled.Dashboard">
+                    Dashboard
+                </MudButton>
+                <MudButton Href="/compare" 
+                          Variant="Variant.Outlined" 
+                          Color="Color.Primary" 
+                          FullWidth="true"
+                          StartIcon="@Icons.Material.Filled.Compare">
+                    Compare Environments
+                </MudButton>
+                <MudButton Href="https://github.com/SagePastelAccounting" 
+                          Variant="Variant.Outlined" 
+                          Color="Color.Secondary" 
+                          FullWidth="true"
+                          Target="_blank"
+                          StartIcon="@Icons.Material.Filled.Code">
+                    View on GitHub
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
