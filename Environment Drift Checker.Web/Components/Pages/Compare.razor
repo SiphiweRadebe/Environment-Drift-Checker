@@ -1,0 +1,290 @@
+﻿@page "/compare"
+@using MudBlazor
+@inject HttpClient Http
+
+<PageTitle>Compare - Environment Drift Checker</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Compare Environments</MudText>
+<MudText Class="mb-8">Compare configurations between two environments</MudText>
+
+@if (_loadingEnvironments)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudGrid>
+            <MudItem xs="12" md="5">
+                <MudSelect T="int?" 
+                          Label="Source Environment" 
+                          @bind-Value="_sourceEnvId"
+                          Variant="Variant.Outlined">
+                    @if (_environments != null)
+                    {
+                        @foreach (var env in _environments)
+                        {
+                            <MudSelectItem Value="@((int?)env.Id)">@env.Name</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="2" Class="d-flex align-center justify-center">
+                <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Size="Size.Large" Color="Color.Primary" />
+            </MudItem>
+
+            <MudItem xs="12" md="5">
+                <MudSelect T="int?" 
+                          Label="Target Environment" 
+                          @bind-Value="_targetEnvId"
+                          Variant="Variant.Outlined">
+                    @if (_environments != null)
+                    {
+                        @foreach (var env in _environments)
+                        {
+                            <MudSelectItem Value="@((int?)env.Id)">@env.Name</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" Class="d-flex justify-center">
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          Size="Size.Large"
+                          StartIcon="@Icons.Material.Filled.PlayArrow"
+                          OnClick="CompareEnvironments"
+                          Disabled="@(!_sourceEnvId.HasValue || !_targetEnvId.HasValue || _comparing)">
+                    @(_comparing ? "Comparing..." : "Compare")
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (_error != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+    }
+
+    @if (_comparisonResult != null)
+    {
+        <MudGrid>
+            <!-- Summary Cards -->
+            <MudItem xs="12" sm="4">
+                <MudCard Elevation="2">
+                    <MudCardContent Class="text-center">
+                        <MudText Typo="Typo.h6">Total Keys</MudText>
+                        <MudText Typo="Typo.h3">@_comparisonResult.TotalKeys</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="4">
+                <MudCard Elevation="2">
+                    <MudCardContent Class="text-center">
+                        <MudText Typo="Typo.h6" Color="Color.Warning">Drifts Found</MudText>
+                        <MudText Typo="Typo.h3" Color="Color.Warning">@_comparisonResult.DriftCount</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="4">
+                <MudCard Elevation="2">
+                    <MudCardContent Class="text-center">
+                        <MudText Typo="Typo.h6" Color="@GetStatusColor(_comparisonResult.Status)">
+                            Status
+                        </MudText>
+                        <MudChip Color="@GetStatusColor(_comparisonResult.Status)" Size="Size.Large">
+                            @_comparisonResult.Status
+                        </MudChip>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Drift Details -->
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.h5" Class="mb-4">Drift Details</MudText>
+                    
+                    <MudTable Items="@_comparisonResult.Drifts" 
+                             Hover="true" 
+                             Breakpoint="Breakpoint.Sm"
+                             Filter="new Func<DriftDetailDto,bool>(FilterFunc)">
+                        <ToolBarContent>
+                            <MudText Typo="Typo.h6">Configuration Differences</MudText>
+                            <MudSpacer />
+                            <MudTextField @bind-Value="_searchString" 
+                                        Placeholder="Search" 
+                                        Adornment="Adornment.Start" 
+                                        AdornmentIcon="@Icons.Material.Filled.Search" 
+                                        IconSize="Size.Medium" 
+                                        Class="mt-0">
+                            </MudTextField>
+                        </ToolBarContent>
+                        <HeaderContent>
+                            <MudTh>Key</MudTh>
+                            <MudTh>Source Value</MudTh>
+                            <MudTh>Target Value</MudTh>
+                            <MudTh>Drift Type</MudTh>
+                            <MudTh>Severity</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Key">
+                                <MudText Typo="Typo.body2"><strong>@context.Key</strong></MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Source Value">
+                                <MudText Typo="Typo.body2" Color="@(context.DriftType != "Match" ? Color.Warning : Color.Default)">
+                                    @(context.SourceValue ?? "N/A")
+                                </MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Target Value">
+                                <MudText Typo="Typo.body2" Color="@(context.DriftType != "Match" ? Color.Warning : Color.Default)">
+                                    @(context.TargetValue ?? "N/A")
+                                </MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Drift Type">
+                                <MudChip Size="Size.Small" Color="@GetDriftTypeColor(context.DriftType)">
+                                    @context.DriftType
+                                </MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="Severity">
+                                <MudChip Size="Size.Small" Color="@GetSeverityColor(context.Severity)">
+                                    @context.Severity
+                                </MudChip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+}
+
+@code {
+    private bool _loadingEnvironments = true;
+    private bool _comparing = false;
+    private string? _error;
+    private int? _sourceEnvId;
+    private int? _targetEnvId;
+    private string _searchString = "";
+    private IEnumerable<EnvironmentDto>? _environments;
+    private ComparisonResultDto? _comparisonResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Console.WriteLine("Loading environments for compare page...");
+            Console.WriteLine($"HttpClient BaseAddress: {Http.BaseAddress}");
+            
+            _environments = await Http.GetFromJsonAsync<IEnumerable<EnvironmentDto>>("api/environments");
+            
+            Console.WriteLine($"Loaded {_environments?.Count() ?? 0} environments for comparison");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load environments: {ex.Message}";
+            Console.WriteLine($"ERROR loading environments: {ex}");
+        }
+        finally
+        {
+            _loadingEnvironments = false;
+        }
+    }
+
+    private async Task CompareEnvironments()
+    {
+        if (!_sourceEnvId.HasValue || !_targetEnvId.HasValue)
+            return;
+
+        try
+        {
+            _comparing = true;
+            _error = null;
+            _comparisonResult = await Http.GetFromJsonAsync<ComparisonResultDto>(
+                $"api/compare?sourceEnvId={_sourceEnvId}&targetEnvId={_targetEnvId}");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Comparison failed: {ex.Message}";
+            _comparisonResult = null;
+        }
+        finally
+        {
+            _comparing = false;
+        }
+    }
+
+    private bool FilterFunc(DriftDetailDto drift)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+        if (drift.Key.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (drift.SourceValue?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        if (drift.TargetValue?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        return false;
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Clean" => Color.Success,
+        "Warning" => Color.Warning,
+        "Critical" => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetDriftTypeColor(string driftType) => driftType switch
+    {
+        "Match" => Color.Success,
+        "Different" => Color.Warning,
+        "MissingInSource" => Color.Error,
+        "MissingInTarget" => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetSeverityColor(string severity) => severity switch
+    {
+        "Low" => Color.Success,
+        "Medium" => Color.Warning,
+        "High" => Color.Error,
+        _ => Color.Default
+    };
+
+    // DTOs
+    public class EnvironmentDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    public class ComparisonResultDto
+    {
+        public int RecordId { get; set; }
+        public EnvironmentSummaryDto SourceEnvironment { get; set; } = null!;
+        public EnvironmentSummaryDto TargetEnvironment { get; set; } = null!;
+        public DateTime ComparisonDate { get; set; }
+        public int TotalKeys { get; set; }
+        public int DriftCount { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public List<DriftDetailDto> Drifts { get; set; } = new();
+    }
+
+    public class EnvironmentSummaryDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    public class DriftDetailDto
+    {
+        public string Key { get; set; } = string.Empty;
+        public string? SourceValue { get; set; }
+        public string? TargetValue { get; set; }
+        public string DriftType { get; set; } = string.Empty;
+        public string Severity { get; set; } = string.Empty;
+    }
+}

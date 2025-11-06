@@ -1,7 +1,199 @@
 ﻿@page "/"
+@using MudBlazor
+@inject HttpClient Http
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard - Environment Drift Checker</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudText Typo="Typo.h3" GutterBottom="true">Dashboard</MudText>
+<MudText Class="mb-8">Overview of environment drift status</MudText>
 
-Welcome to your new app.
+@if (_loading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudGrid>
+        <!-- Summary Cards -->
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Color="Color.Primary">Total Environments</MudText>
+                    <MudText Typo="Typo.h3">@_environments?.Count() ?? 0</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Color="Color.Info">Recent Comparisons</MudText>
+                    <MudText Typo="Typo.h3">@_recentComparisons?.Count() ?? 0</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Color="Color.Warning">Total Drifts Found</MudText>
+                    <MudText Typo="Typo.h3">@_totalDrifts</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Color="Color.Success">Clean Comparisons</MudText>
+                    <MudText Typo="Typo.h3">@_cleanComparisons</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Environments List -->
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Environments</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (_environments != null && _environments.Any())
+                    {
+                        <MudList>
+                            @foreach (var env in _environments)
+                            {
+                                <MudListItem Icon="@Icons.Material.Filled.Cloud">
+                                    <MudText>@env.Name</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @env.ConfigurationCount configurations
+                                    </MudText>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudText Color="Color.Secondary">No environments found</MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Recent Comparisons -->
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Recent Comparisons</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (_recentComparisons != null && _recentComparisons.Any())
+                    {
+                        <MudList>
+                            @foreach (var comparison in _recentComparisons.Take(5))
+                            {
+                                <MudListItem Icon="@Icons.Material.Filled.Compare">
+                                    <MudText>
+                                        @comparison.SourceEnvironment.Name vs @comparison.TargetEnvironment.Name
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Color="@GetStatusColor(comparison.Status)">
+                                        @comparison.DriftCount drifts - @comparison.Status
+                                    </MudText>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudText Color="Color.Secondary">No comparisons yet</MudText>
+                    }
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Href="/history" Color="Color.Primary">View All</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private IEnumerable<EnvironmentDto>? _environments;
+    private IEnumerable<ComparisonResultDto>? _recentComparisons;
+    private int _totalDrifts;
+    private int _cleanComparisons;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Fetch environments
+            _environments = await Http.GetFromJsonAsync<IEnumerable<EnvironmentDto>>("api/environments");
+            
+            // Fetch recent comparisons
+            _recentComparisons = await Http.GetFromJsonAsync<IEnumerable<ComparisonResultDto>>("api/compare/history");
+            
+            // Calculate stats
+            if (_recentComparisons != null)
+            {
+                _totalDrifts = _recentComparisons.Sum(c => c.DriftCount);
+                _cleanComparisons = _recentComparisons.Count(c => c.Status == "Clean");
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load dashboard data: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Clean" => Color.Success,
+        "Warning" => Color.Warning,
+        "Critical" => Color.Error,
+        _ => Color.Default
+    };
+
+    // DTOs (these should match your API)
+    public class EnvironmentDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int ConfigurationCount { get; set; }
+    }
+
+    public class ComparisonResultDto
+    {
+        public int RecordId { get; set; }
+        public EnvironmentSummaryDto SourceEnvironment { get; set; } = null!;
+        public EnvironmentSummaryDto TargetEnvironment { get; set; } = null!;
+        public DateTime ComparisonDate { get; set; }
+        public int TotalKeys { get; set; }
+        public int DriftCount { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class EnvironmentSummaryDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,260 @@
+﻿@page "/history"
+@using MudBlazor
+@inject HttpClient Http
+
+<PageTitle>History - Environment Drift Checker</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Comparison History</MudText>
+<MudText Class="mb-8">View all previous environment comparisons</MudText>
+
+@if (_loading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else if (_history != null && _history.Any())
+{
+    <MudPaper Elevation="2">
+        <MudTable Items="@_history" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
+            <HeaderContent>
+                <MudTh>Date</MudTh>
+                <MudTh>Source</MudTh>
+                <MudTh>Target</MudTh>
+                <MudTh>Total Keys</MudTh>
+                <MudTh>Drifts</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Date">
+                    <MudText Typo="Typo.body2">
+                        @context.ComparisonDate.ToLocalTime().ToString("MMM dd, yyyy HH:mm")
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Source">
+                    <MudChip Size="Size.Small" Icon="@Icons.Material.Filled.Cloud">
+                        @context.SourceEnvironment.Name
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Target">
+                    <MudChip Size="Size.Small" Icon="@Icons.Material.Filled.Cloud">
+                        @context.TargetEnvironment.Name
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Total Keys">
+                    <MudText Typo="Typo.body2">@context.TotalKeys</MudText>
+                </MudTd>
+                <MudTd DataLabel="Drifts">
+                    <MudText Typo="Typo.body2" Color="@(context.DriftCount > 0 ? Color.Warning : Color.Success)">
+                        <strong>@context.DriftCount</strong>
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                        @context.Status
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                 Size="Size.Small" 
+                                 Color="Color.Primary"
+                                 OnClick="@(() => ViewDetails(context.RecordId))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    @if (_selectedComparison != null)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="2">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                Comparison Details
+            </MudText>
+
+            <MudGrid Class="mb-4">
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Source</MudText>
+                    <MudText Typo="Typo.h6">@_selectedComparison.SourceEnvironment.Name</MudText>
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Target</MudText>
+                    <MudText Typo="Typo.h6">@_selectedComparison.TargetEnvironment.Name</MudText>
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Date</MudText>
+                    <MudText Typo="Typo.h6">
+                        @_selectedComparison.ComparisonDate.ToLocalTime().ToString("MMM dd, yyyy")
+                    </MudText>
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Status</MudText>
+                    <MudChip Color="@GetStatusColor(_selectedComparison.Status)">
+                        @_selectedComparison.Status
+                    </MudChip>
+                </MudItem>
+            </MudGrid>
+
+            @if (_loadingDetails)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (_selectedComparison.Drifts != null && _selectedComparison.Drifts.Any())
+            {
+                <MudTable Items="@_selectedComparison.Drifts" Hover="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Source Value</MudTh>
+                        <MudTh>Target Value</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Severity</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key">
+                            <MudText Typo="Typo.body2"><strong>@context.Key</strong></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Source Value">
+                            <MudText Typo="Typo.body2">@(context.SourceValue ?? "N/A")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Target Value">
+                            <MudText Typo="Typo.body2">@(context.TargetValue ?? "N/A")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip Size="Size.Small" Color="@GetDriftTypeColor(context.DriftType)">
+                                @context.DriftType
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Severity">
+                            <MudChip Size="Size.Small" Color="@GetSeverityColor(context.Severity)">
+                                @context.Severity
+                            </MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    }
+}
+else
+{
+    <MudPaper Class="pa-8" Elevation="2">
+        <MudText Align="Align.Center" Color="Color.Secondary">
+            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Class="mb-4" />
+        </MudText>
+        <MudText Typo="Typo.h6" Align="Align.Center" Color="Color.Secondary">
+            No comparison history found
+        </MudText>
+        <MudText Align="Align.Center" Color="Color.Secondary" Class="mt-2">
+            Run your first comparison from the Compare page
+        </MudText>
+        <div class="d-flex justify-center mt-4">
+            <MudButton Href="/compare" Variant="Variant.Filled" Color="Color.Primary">
+                Go to Compare
+            </MudButton>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _loadingDetails = false;
+    private string? _error;
+    private IEnumerable<ComparisonResultDto>? _history;
+    private ComparisonResultDto? _selectedComparison;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistory();
+    }
+
+    private async Task LoadHistory()
+    {
+        try
+        {
+            _loading = true;
+            _history = await Http.GetFromJsonAsync<IEnumerable<ComparisonResultDto>>("api/compare/history");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load history: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ViewDetails(int recordId)
+    {
+        try
+        {
+            _loadingDetails = true;
+            _selectedComparison = await Http.GetFromJsonAsync<ComparisonResultDto>(
+                $"api/compare/history/{recordId}");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load details: {ex.Message}";
+        }
+        finally
+        {
+            _loadingDetails = false;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Clean" => Color.Success,
+        "Warning" => Color.Warning,
+        "Critical" => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetDriftTypeColor(string driftType) => driftType switch
+    {
+        "Match" => Color.Success,
+        "Different" => Color.Warning,
+        "MissingInSource" => Color.Error,
+        "MissingInTarget" => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetSeverityColor(string severity) => severity switch
+    {
+        "Low" => Color.Success,
+        "Medium" => Color.Warning,
+        "High" => Color.Error,
+        _ => Color.Default
+    };
+
+    // DTOs
+    public class ComparisonResultDto
+    {
+        public int RecordId { get; set; }
+        public EnvironmentSummaryDto SourceEnvironment { get; set; } = null!;
+        public EnvironmentSummaryDto TargetEnvironment { get; set; } = null!;
+        public DateTime ComparisonDate { get; set; }
+        public int TotalKeys { get; set; }
+        public int DriftCount { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public List<DriftDetailDto>? Drifts { get; set; }
+    }
+
+    public class EnvironmentSummaryDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    public class DriftDetailDto
+    {
+        public string Key { get; set; } = string.Empty;
+        public string? SourceValue { get; set; }
+        public string? TargetValue { get; set; }
+        public string DriftType { get; set; } = string.Empty;
+        public string Severity { get; set; } = string.Empty;
+    }
+  }
+}

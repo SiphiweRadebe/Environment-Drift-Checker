@@ -1,0 +1,217 @@
+﻿@page "/environments"
+@using MudBlazor
+@inject HttpClient Http
+
+<PageTitle>Environments - Environment Drift Checker</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Environments</MudText>
+<MudText Class="mb-8">Manage your environments and configurations</MudText>
+
+@if (_loading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudGrid>
+        @if (_environments != null)
+        {
+            @foreach (var env in _environments)
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <MudCard Elevation="2">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@env.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @env.Description
+                                </MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudIconButton Icon="@Icons.Material.Filled.Settings" 
+                                             Color="Color.Default" 
+                                             Size="Size.Small" />
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudChip Icon="@Icons.Material.Filled.Storage" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small">
+                                @env.ConfigurationCount configurations
+                            </MudChip>
+                            <MudChip Icon="@Icons.Material.Filled.CalendarToday" 
+                                   Color="Color.Info" 
+                                   Size="Size.Small">
+                                Created @env.CreatedAt.ToShortDateString()
+                            </MudChip>
+                            @if (env.IsActive)
+                            {
+                                <MudChip Icon="@Icons.Material.Filled.CheckCircle" 
+                                       Color="Color.Success" 
+                                       Size="Size.Small">
+                                    Active
+                                </MudChip>
+                            }
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton StartIcon="@Icons.Material.Filled.Visibility" 
+                                     Color="Color.Primary" 
+                                     OnClick="@(() => ViewConfigurations(env.Id))">
+                                View Configs
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        }
+    </MudGrid>
+
+    @if (_selectedEnvironment != null)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="2">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                Configurations for @_selectedEnvironment.Name
+            </MudText>
+            
+            @if (_loadingConfigs)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (_configurations != null && _configurations.Any())
+            {
+                <MudTable Items="@_configurations" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Value</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Last Updated</MudTh>
+                        <MudTh>Sensitive</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key">
+                            <MudText Typo="Typo.body2">@context.Key</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Value">
+                            <MudText Typo="Typo.body2">@context.Value</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Category">
+                            <MudChip Size="Size.Small" Color="@GetCategoryColor(context.Category)">
+                                @context.Category
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Last Updated">
+                            <MudText Typo="Typo.body2">@context.LastUpdated.ToShortDateString()</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Sensitive">
+                            @if (context.IsSensitive)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Small" />
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <MudText Color="Color.Secondary">No configurations found</MudText>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private bool _loadingConfigs = false;
+    private string? _error;
+    private IEnumerable<EnvironmentDto>? _environments;
+    private IEnumerable<ConfigurationItemDto>? _configurations;
+    private EnvironmentDto? _selectedEnvironment;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEnvironments();
+    }
+
+    private async Task LoadEnvironments()
+    {
+        try
+        {
+            _loading = true;
+            Console.WriteLine("Starting to load environments...");
+            Console.WriteLine($"HttpClient BaseAddress: {Http.BaseAddress}");
+            
+            _environments = await Http.GetFromJsonAsync<IEnumerable<EnvironmentDto>>("api/environments");
+            
+            Console.WriteLine($"Loaded {_environments?.Count() ?? 0} environments");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load environments: {ex.Message}";
+            Console.WriteLine($"ERROR: {ex}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ViewConfigurations(int environmentId)
+    {
+        try
+        {
+            _loadingConfigs = true;
+            _selectedEnvironment = _environments?.FirstOrDefault(e => e.Id == environmentId);
+            
+            Console.WriteLine($"Loading configs for environment {environmentId}");
+            
+            _configurations = await Http.GetFromJsonAsync<IEnumerable<ConfigurationItemDto>>(
+                $"api/environments/{environmentId}/configurations");
+            
+            Console.WriteLine($"Loaded {_configurations?.Count() ?? 0} configurations");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load configurations: {ex.Message}";
+            Console.WriteLine($"ERROR: {ex}");
+        }
+        finally
+        {
+            _loadingConfigs = false;
+        }
+    }
+
+    private Color GetCategoryColor(string category) => category.ToLower() switch
+    {
+        "api" => Color.Primary,
+        "database" => Color.Info,
+        "security" => Color.Error,
+        "feature" => Color.Success,
+        "performance" => Color.Warning,
+        _ => Color.Default
+    };
+
+    // DTOs
+    public class EnvironmentDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public bool IsActive { get; set; }
+        public int ConfigurationCount { get; set; }
+    }
+
+    public class ConfigurationItemDto
+    {
+        public int Id { get; set; }
+        public string Key { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public DateTime LastUpdated { get; set; }
+        public bool IsSensitive { get; set; }
+    }
+}
