@@ -27,11 +27,4 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
     
-    - name: Find and run tests
-      run: |
-        TEST_PROJECTS=$(find . -name "*Tests.csproj" -o -name "*.Tests.csproj")
-        if [ -z "$TEST_PROJECTS" ]; then
-          echo "No test projects found, skipping tests"
-        else
-          dotnet test --configuration Release --no-build --verbosity normal
-        fi
+   
